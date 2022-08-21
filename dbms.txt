@@ -1,0 +1,87 @@
+-- 3)	Display the total number of customers based on gender who have placed orders of worth at least Rs.3000.
+SELECT SUM(c.CUS_ID) TOTAL_NO_OF_CUSTOMER,c.CUS_GENDER
+FROM customer c
+JOIN (SELECT *,SUM(ORD_AMOUNT) as TOTAL_AMOUNT 
+FROM `order`
+GROUP BY CUS_ID
+HAVING TOTAL_AMOUNT>=3000) T
+ON c.Cus_ID=T.CUS_ID
+GROUP BY c.CUS_GENDER;
+
+
+
+-- 4)	Display all the orders along with product name ordered by a customer having Customer_Id=2
+SELECT p.PRO_NAME,o.*
+FROM `order` o
+JOIN supplier_pricing s 
+ON s.PRICING_ID=o.PRICING_ID
+JOIN product p
+ON p.PRO_ID=s.PRO_ID
+WHERE o.CUS_ID=2;
+
+-- 5)	Display the Supplier details who can supply more than one product
+
+SELECT *
+FROM supplier s
+WHERE s.SUPP_ID IN (SELECT sp.SUPP_ID
+FROM product p
+JOIN supplier_pricing sp
+ON p.PRO_ID=sp.PRO_ID
+GROUP BY sp.SUPP_Id
+HAVING COUNT(p.PRO_ID)>1
+);
+
+
+
+
+ -- 6)	Find the least expensive product from each category and print the table with category id, name, product name and price of the product
+
+SELECT ca.CAT_ID,ca.CAT_NAME,pd.PRO_NAME,MIN(sp.SUPP_PRICE) as 'PRICE'
+FROM category ca 
+JOIN product pd
+ON ca.CAT_ID=pd.CAT_ID
+JOIN supplier_pricing sp
+ON sp.PRO_ID=pd.PRO_ID
+GROUP BY ca.CAT_ID;
+
+
+
+-- 7)	Display the Id and Name of the Product ordered after “2021-10-05”.
+
+SELECT p.PRO_ID,p.PRO_NAME
+FROM product p
+JOIN supplier_pricing sp
+ON p.PRO_ID=sp.PRO_ID
+WHERE sp.PRICING_ID 
+IN (SELECT o.PRICING_ID
+FROM `order` o
+WHERE o.ORD_DATE>='2021-10-05'); 
+
+-- 8)	Display customer name and gender whose names start or end with character 'A'.
+SELECT CUS_NAME,CUS_GENDER
+FROM customer
+WHERE CUS_NAME LIKE '%A' OR CUS_NAME LIKE 'A%';
+
+
+--  9)	Create a stored procedure to display supplier id, name, rating and Type_of_Service. For Type_of_Service, If rating =5, print “Excellent Service”,If rating >4 print “Good Service”, If rating >2 print “Average Service” else print “Poor Service”.
+ 
+  --     procedure 
+  
+CREATE DEFINER=`root`@`localhost` PROCEDURE `typeofservice`()
+BEGIN
+select sp.supp_id, sup.supp_name,avg(rt.RAT_RATSTARS) as RATING,case when avg(rt.RAT_RATSTARS) = 5 then 'Excellent Service'
+when avg(rt.RAT_RATSTARS) >= 4 then 'Good Service'
+when avg(rt.RAT_RATSTARS)>= 2 then 'Average service'
+else 'poor Service'
+end 'Type of service'
+from supplier sup
+join supplier_pricing sp
+on sup.supp_id = sp.supp_id
+join `order` ors
+on sp.pricing_id = ors.pricing_id
+join rating rt
+on ors.ord_id = rt.ord_id
+GROUP BY sp.SUPP_ID;
+END
+
+call typeofservice; 
